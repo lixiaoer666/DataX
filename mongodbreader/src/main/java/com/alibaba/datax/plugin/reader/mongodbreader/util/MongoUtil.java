@@ -10,9 +10,11 @@ import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.reader.mongodbreader.KeyConstant;
 import com.alibaba.datax.plugin.reader.mongodbreader.MongoDBReaderErrorCode;
 
-import com.mongodb.MongoClient;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 
 /**
  * Created by jianying.wcj on 2015/3/17 0017.
@@ -27,7 +29,9 @@ public class MongoUtil {
             throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_VALUE,"不合法参数");
         }
         try {
-            return new MongoClient(parseServerAddress(addressList));
+            List<ServerAddress> serverAddresses = parseServerAddress(addressList);
+            MongoClientSettings settings = MongoClientSettings.builder().applyToClusterSettings(builder -> builder.hosts(serverAddresses)).build();
+            return MongoClients.create(settings);
         } catch (UnknownHostException e) {
             throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_ADDRESS,"不合法的地址");
         } catch (NumberFormatException e) {
@@ -45,7 +49,12 @@ public class MongoUtil {
         }
         try {
             MongoCredential credential = MongoCredential.createCredential(userName, database, password.toCharArray());
-            return new MongoClient(parseServerAddress(addressList), Arrays.asList(credential));
+            List<ServerAddress> serverAddresses = parseServerAddress(addressList);
+            MongoClientSettings.Builder settingBuilder = MongoClientSettings.builder();
+            settingBuilder.credential(credential);
+            MongoClientSettings settings = settingBuilder.applyToClusterSettings(
+                    builder -> builder.hosts(serverAddresses)).build();
+            return MongoClients.create(settings);
 
         } catch (UnknownHostException e) {
             throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_ADDRESS,"不合法的地址");

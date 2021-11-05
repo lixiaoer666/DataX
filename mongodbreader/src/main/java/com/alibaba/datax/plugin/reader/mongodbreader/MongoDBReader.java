@@ -24,13 +24,14 @@ import com.alibaba.fastjson.JSONObject;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-
+import com.mongodb.client.model.Filters;
 /**
  * Created by jianying.wcj on 2015/3/19 0019.
  * Modified by mingyan.zc on 2016/6/13.
@@ -106,25 +107,25 @@ public class MongoDBReader extends Reader {
             MongoCollection col = db.getCollection(this.collection);
 
             MongoCursor<Document> dbCursor = null;
-            Document filter = new Document();
+            Bson filter = new Document();
             if (lowerBound.equals("min")) {
                 if (!upperBound.equals("max")) {
-                    filter.append(KeyConstant.MONGO_PRIMARY_ID, new Document("$lt", isObjectId ? new ObjectId(upperBound.toString()) : upperBound));
+                    filter = Filters.lte(KeyConstant.MONGO_PRIMARY_ID, isObjectId ?  new ObjectId(upperBound.toString()) : upperBound);
                 }
             } else if (upperBound.equals("max")) {
-                filter.append(KeyConstant.MONGO_PRIMARY_ID, new Document("$gte", isObjectId ? new ObjectId(lowerBound.toString()) : lowerBound));
+                filter = Filters.gte(KeyConstant.MONGO_PRIMARY_ID, isObjectId ? new ObjectId(lowerBound.toString()) : lowerBound);
             } else {
-                filter.append(KeyConstant.MONGO_PRIMARY_ID, new Document("$gte", isObjectId ? new ObjectId(lowerBound.toString()) : lowerBound).append("$lt", isObjectId ? new ObjectId(upperBound.toString()) : upperBound));
+                filter = Filters.and(Filters.lte(KeyConstant.MONGO_PRIMARY_ID, new ObjectId(upperBound.toString())), Filters.gte(KeyConstant.MONGO_PRIMARY_ID, isObjectId ? new ObjectId(lowerBound.toString()) : lowerBound));
             }
             if(!Strings.isNullOrEmpty(query)) {
                 Document queryFilter = Document.parse(query);
-                filter = new Document("$and", Arrays.asList(filter, queryFilter));
+                filter = Filters.and(Arrays.asList(filter, queryFilter));
             }
             dbCursor = col.find(filter).iterator();
             while (dbCursor.hasNext()) {
                 Document item = dbCursor.next();
                 Record record = recordSender.createRecord();
-                Iterator columnItera = mongodbColumnMeta.iterator();
+                Iterator<Object> columnItera = mongodbColumnMeta.iterator();
                 while (columnItera.hasNext()) {
                     JSONObject column = (JSONObject)columnItera.next();
                     Object tempCol = item.get(column.getString(KeyConstant.COLUMN_NAME));

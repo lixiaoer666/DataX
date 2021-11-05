@@ -39,8 +39,8 @@
         <!-- mongodb 依赖 -->
         <dependency>
 		  <groupId>org.mongodb</groupId>
-		  <artifactId>mongo-java-driver</artifactId>
-		  <version>3.2.2</version>
+		  <artifactId>mongodb-driver-sync</artifactId>
+		  <version>4.3.3</version>
 		</dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
