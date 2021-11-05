@@ -1,18 +1,24 @@
 package com.alibaba.datax.plugin.writer.mongodbwriter.util;
 
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.mongodbwriter.KeyConstant;
 import com.alibaba.datax.plugin.writer.mongodbwriter.MongoDBWriterErrorCode;
-import com.mongodb.MongoClient;
+
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+/**
+ * Created by jianying.wcj on 2015/3/17 0017.
+ * Modified by mingyan.zc on 2016/6/13.
+ */
 public class MongoUtil {
 
     public static MongoClient initMongoClient(Configuration conf) {
@@ -22,17 +28,19 @@ public class MongoUtil {
             throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_VALUE,"不合法参数");
         }
         try {
-            return new MongoClient(parseServerAddress(addressList));
+            List<ServerAddress> serverAddresses = parseServerAddress(addressList);
+            MongoClientSettings settings = MongoClientSettings.builder().applyToClusterSettings(builder -> builder.hosts(serverAddresses)).build();
+            return MongoClients.create(settings);
         } catch (UnknownHostException e) {
-           throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_ADDRESS,"不合法的地址");
+            throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_ADDRESS,"不合法的地址");
         } catch (NumberFormatException e) {
-           throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_VALUE,"不合法参数");
+            throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_VALUE,"不合法参数");
         } catch (Exception e) {
             throw DataXException.asDataXException(MongoDBWriterErrorCode.UNEXCEPT_EXCEPTION,"未知异常");
         }
     }
 
-    public static MongoClient initCredentialMongoClient(Configuration conf,String userName,String password,String database) {
+    public static MongoClient initCredentialMongoClient(Configuration conf, String userName, String password, String database) {
 
         List<Object> addressList = conf.getList(KeyConstant.MONGO_ADDRESS);
         if(!isHostPortPattern(addressList)) {
@@ -40,7 +48,12 @@ public class MongoUtil {
         }
         try {
             MongoCredential credential = MongoCredential.createCredential(userName, database, password.toCharArray());
-            return new MongoClient(parseServerAddress(addressList), Arrays.asList(credential));
+            List<ServerAddress> serverAddresses = parseServerAddress(addressList);
+            MongoClientSettings.Builder settingBuilder = MongoClientSettings.builder();
+            settingBuilder.credential(credential);
+            MongoClientSettings settings = settingBuilder.applyToClusterSettings(
+                    builder -> builder.hosts(serverAddresses)).build();
+            return MongoClients.create(settings);
 
         } catch (UnknownHostException e) {
             throw DataXException.asDataXException(MongoDBWriterErrorCode.ILLEGAL_ADDRESS,"不合法的地址");
@@ -81,15 +94,5 @@ public class MongoUtil {
             }
         }
         return addressList;
-    }
-
-    public static void main(String[] args) {
-        try {
-            ArrayList hostAddress = new ArrayList();
-            hostAddress.add("127.0.0.1:27017");
-            System.out.println(MongoUtil.isHostPortPattern(hostAddress));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

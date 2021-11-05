@@ -12,11 +12,15 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Strings;
 import com.mongodb.*;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOptions;
+import org.bson.Document;
+import org.bson.json.JsonReader;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,9 +100,9 @@ public class MongoDBWriter extends Writer{
                 col.drop();
             } else if (type.equals("remove")){
                 String json = conConf.getString("json");
-                BasicDBObject query;
+                Document query;
                 if (Strings.isNullOrEmpty(json)) {
-                    query = new BasicDBObject();
+                    query = new Document();
                     List<Object> items = conConf.getList("item", Object.class);
                     for (Object con : items) {
                         Configuration _conf = Configuration.from(con.toString());
@@ -106,13 +110,13 @@ public class MongoDBWriter extends Writer{
                             query.put(_conf.getString("name"), _conf.get("value"));
                         } else {
                             query.put(_conf.getString("name"),
-                                    new BasicDBObject(_conf.getString("condition"), _conf.get("value")));
+                                    new Document(_conf.getString("condition"), _conf.get("value")));
                         }
                     }
 //              and  { "pv" : { "$gt" : 200 , "$lt" : 3000} , "pid" : { "$ne" : "xxx"}}
 //              or  { "$or" : [ { "age" : { "$gt" : 27}} , { "age" : { "$lt" : 15}}]}
                 } else {
-                    query = (BasicDBObject) com.mongodb.util.JSON.parse(json);
+                    query = Document.parse(json);
                 }
                 col.deleteMany(query);
             }
@@ -129,7 +133,7 @@ public class MongoDBWriter extends Writer{
                                                 MongoDBWriterErrorCode.ILLEGAL_VALUE.getDescription());
             }
             MongoDatabase db = mongoClient.getDatabase(database);
-            MongoCollection<BasicDBObject> col = db.getCollection(this.collection, BasicDBObject.class);
+            MongoCollection<Document> col = db.getCollection(this.collection, Document.class);
             List<Record> writerBuffer = new ArrayList<Record>(this.batchSize);
             Record record = null;
             while((record = lineReceiver.getFromReader()) != null) {
@@ -145,13 +149,13 @@ public class MongoDBWriter extends Writer{
             }
         }
 
-        private void doBatchInsert(MongoCollection<BasicDBObject> collection, List<Record> writerBuffer, JSONArray columnMeta) {
+        private void doBatchInsert(MongoCollection<Document> collection, List<Record> writerBuffer, JSONArray columnMeta) {
 
-            List<BasicDBObject> dataList = new ArrayList<BasicDBObject>();
+            List<Document> dataList = new ArrayList<Document>();
 
             for(Record record : writerBuffer) {
 
-                BasicDBObject data = new BasicDBObject();
+                Document data = new Document();
 
                 for(int i = 0; i < record.getColumnNumber(); i++) {
 
@@ -228,7 +232,7 @@ public class MongoDBWriter extends Writer{
                                 }
                             } else if(type.toLowerCase().equalsIgnoreCase("json")) {
                                 //如果是json类型,将其进行转换
-                                Object mode = com.mongodb.util.JSON.parse(record.getColumn(i).asString());
+                                Object mode = Document.parse(record.getColumn(i).asString());
                                 data.put(columnMeta.getJSONObject(i).getString(KeyConstant.COLUMN_NAME),JSON.toJSON(mode));
                             } else {
                                 data.put(columnMeta.getJSONObject(i).getString(KeyConstant.COLUMN_NAME), record.getColumn(i).asString());
@@ -294,13 +298,13 @@ public class MongoDBWriter extends Writer{
                     KeyConstant.isValueTrue(this.writeMode.getString(KeyConstant.IS_REPLACE))) {
                 String uniqueKey = this.writeMode.getString(KeyConstant.UNIQUE_KEY);
                 if(!Strings.isNullOrEmpty(uniqueKey)) {
-                    List<ReplaceOneModel<BasicDBObject>> replaceOneModelList = new ArrayList<ReplaceOneModel<BasicDBObject>>();
-                    for(BasicDBObject data : dataList) {
-                        BasicDBObject query = new BasicDBObject();
+                    List<ReplaceOneModel<Document>> replaceOneModelList = new ArrayList<ReplaceOneModel<Document>>();
+                    for(Document data : dataList) {
+                        Document query = new Document();
                         if(uniqueKey != null) {
                             query.put(uniqueKey,data.get(uniqueKey));
                         }
-                        ReplaceOneModel<BasicDBObject> replaceOneModel = new ReplaceOneModel<BasicDBObject>(query, data, new UpdateOptions().upsert(true));
+                        ReplaceOneModel<Document> replaceOneModel = new ReplaceOneModel<Document>(query, data, new ReplaceOptions().upsert(true));
                         replaceOneModelList.add(replaceOneModel);
                     }
                     collection.bulkWrite(replaceOneModelList, new BulkWriteOptions().ordered(false));
