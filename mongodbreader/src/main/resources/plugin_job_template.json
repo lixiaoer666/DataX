@@ -6,6 +6,8 @@
         "userPassword": "",
         "dbName": "",
         "collectionName": "",
+        "timestampCol": "",
+        "timestampFmt": "",
         "column": []
     }
 }

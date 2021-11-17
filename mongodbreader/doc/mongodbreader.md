@@ -27,6 +27,8 @@ MongoDBReader通过Datax框架从MongoDB并行的读取数据，通过主控的J
 	                        "userPassword": "",
 	                        "dbName": "tag_per_data",
 	                        "collectionName": "tag_data12",
+	                        "timestampCol": "time_at",
+	                        "timestampFmt": "yyyy-MM-dd HH:ii:ss",
 	                        "column": [
 	                            {
 	                                "name": "unique_id",
@@ -129,6 +131,8 @@ MongoDBReader通过Datax框架从MongoDB并行的读取数据，通过主控的J
 * userPassword： MongoDB的密码。【选填】
 * collectionName： MonogoDB的集合名。【必填】
 * column：MongoDB的文档列名。【必填】
+* timestampCol： 时间戳的字段名称。用来在迁移数据时，指定时间戳字段【选填】
+* timestampFmt： 时间戳的格式化字符串。用来在迁移数据时，将指定的时间戳字段格式化为字符串，与timestampCol配合使用【选填】
 * name：Column的名字。【必填】
 * type：Column的类型。【选填】
 * splitter：因为MongoDB支持数组类型，但是Datax框架本身不支持数组类型，所以mongoDB读出来的数组类型要通过这个分隔符合并成字符串。【选填】

@@ -64,6 +64,14 @@ public class KeyConstant {
      * 跳过的列数
      */
     public static final String SKIP_COUNT = "skipCount";
+    /**
+     * 时间戳字段名称
+     */
+    public static final String TIMESTAMP_COLUMN = "timestampCol";
+    /**
+     * 时间戳格式化内容
+     */
+    public static final String TIMESTAMP_FORMAT = "timestampFmt";
 
 
     public static final String LOWER_BOUND = "lowerBound";
