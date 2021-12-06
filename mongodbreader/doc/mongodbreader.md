@@ -28,7 +28,7 @@ MongoDBReader通过Datax框架从MongoDB并行的读取数据，通过主控的J
 	                        "dbName": "tag_per_data",
 	                        "collectionName": "tag_data12",
 	                        "timestampCol": "time_at",
-	                        "timestampFmt": "yyyy-MM-dd HH:ii:ss",
+	                        "timestampFmt": "yyyy-MM-dd HH:mm:ss",
 	                        "column": [
 	                            {
 	                                "name": "unique_id",

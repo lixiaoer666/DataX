@@ -11,6 +11,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -85,11 +86,17 @@ public class CollectionSplitUtil {
         }
 
         LOGGER.info("获取集合状态及总数");
-//        Document result = database.runCommand(new Document("collStats", collName));
-        Document queryFilter = Document.parse(query);
+        int docCount = 0;
+        Document queryFilter = null;
+        if(StringUtils.isNoneBlank(query)){
+            queryFilter = Document.parse(query);
+            docCount = (int) database.getCollection(collName).countDocuments(queryFilter);
+        } else {
+            Document result = database.runCommand(new Document("collStats", collName));
+            docCount = result.getInteger("count");
+        }
 
-        int docCount = (int) database.getCollection(collName).countDocuments(queryFilter);
-        LOGGER.info("集合总数为: "+ String.valueOf(docCount));
+        LOGGER.info("集合总数为: "+ docCount);
         if (docCount == 0) {
             return rangeList;
         }
@@ -103,7 +110,17 @@ public class CollectionSplitUtil {
 
         int skipCount = chunkDocCount;
         MongoCollection<Document> col = database.getCollection(collName);
-        Object minId = col.find(queryFilter).sort(Document.parse("{_id: 1}")).limit(1).first().get(KeyConstant.MONGO_PRIMARY_ID);
+        Document firstRow;
+        if(queryFilter != null){
+            firstRow = col.find(queryFilter).sort(Document.parse("{_id: 1}")).limit(1).first();
+        } else {
+            firstRow = col.find().sort(Document.parse("{_id: 1}")).limit(1).first();
+        }
+
+        if(firstRow == null){
+            throw new RuntimeException("空集合");
+        }
+        Object minId = firstRow.get(KeyConstant.MONGO_PRIMARY_ID);
 
         if (isObjectId) {
             ObjectId oid = (ObjectId)minId;
@@ -112,9 +129,18 @@ public class CollectionSplitUtil {
             splitPoints.add(minId);
         }
 
+        Document doc;
         for (int i = 0; i < splitPointCount; i++) {
             // 使用skip进行拆分，这就是慢的根源，并且find没有指定query
-            Document doc = col.find(queryFilter).skip(skipCount).limit(chunkDocCount).first();
+
+            if (queryFilter != null){
+                doc = col.find(queryFilter).skip(skipCount).limit(chunkDocCount).first();
+            } else {
+                doc = col.find().skip(skipCount).limit(chunkDocCount).first();
+            }
+            if(doc == null) {
+                continue;
+            }
             Object id = doc.get(KeyConstant.MONGO_PRIMARY_ID);
             if (isObjectId) {
                 ObjectId oid = (ObjectId)id;
@@ -124,8 +150,21 @@ public class CollectionSplitUtil {
             }
             skipCount += chunkDocCount;
         }
-        Object maxId = col.find(queryFilter).sort(Document.parse("{_id: -1}")).limit(1).first().get(KeyConstant.MONGO_PRIMARY_ID);
 
+
+        Document lastRow;
+
+        if (queryFilter != null) {
+            lastRow = col.find(queryFilter).sort(Document.parse("{_id: -1}")).limit(1).first();
+        } else {
+            lastRow = col.find().sort(Document.parse("{_id: -1}")).limit(1).first();
+        }
+
+        if(lastRow == null) {
+            throw new RuntimeException("空集合");
+        }
+
+        Object maxId = lastRow.get(KeyConstant.MONGO_PRIMARY_ID);
         if (isObjectId) {
             ObjectId oid = (ObjectId)maxId;
             splitPoints.add(oid.toHexString());
