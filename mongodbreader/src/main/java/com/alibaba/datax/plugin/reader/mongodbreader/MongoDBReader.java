@@ -1,5 +1,6 @@
 package com.alibaba.datax.plugin.reader.mongodbreader;
 
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -98,6 +99,9 @@ public class MongoDBReader extends Reader {
         private String timestampCol = null;
         private String timestampFmt = null;
         private SimpleDateFormat formatter = null;
+        private String timeStrCol = null;
+        private String timeStrFmt = null;
+        private SimpleDateFormat timeStrFormatter = null;
         private boolean isObjectId = true;
 
         @Override
@@ -163,6 +167,10 @@ public class MongoDBReader extends Reader {
                         // 10位时间戳自动补0
                         String ts = tempCol.toString();
                         record.addColumn(new StringColumn(formatter.format(new Date(Long.parseLong(ts.length() == 10 ? ts + "000" : ts)))));
+                    } else if (timeStrFormatter != null && timeStrCol.equals(column.getString(KeyConstant.COLUMN_NAME))) {
+                        // 如果当前字段是字符串时间，根据配置format为时间字符串
+                        String ts = tempCol.toString();
+                        record.addColumn(new DateColumn(timeStrFormatter.parse(ts, new ParsePosition(0))));
                     } else if (tempCol instanceof Double) {
                         //TODO deal with Double.isNaN()
                         record.addColumn(new DoubleColumn((Double) tempCol));
@@ -172,22 +180,23 @@ public class MongoDBReader extends Reader {
                         record.addColumn(new DateColumn((Date) tempCol));
                     } else if (tempCol instanceof Integer) {
                         record.addColumn(new LongColumn((Integer) tempCol));
-                    }else if (tempCol instanceof Long) {
+                    } else if (tempCol instanceof Long) {
                         record.addColumn(new LongColumn((Long) tempCol));
-                    } else {
-                        if(KeyConstant.isArrayType(column.getString(KeyConstant.COLUMN_TYPE))) {
-                            String splitter = column.getString(KeyConstant.COLUMN_SPLITTER);
-                            if(Strings.isNullOrEmpty(splitter)) {
-                                throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_VALUE,
+                    } else if(KeyConstant.isArrayType(column.getString(KeyConstant.COLUMN_TYPE))) {
+                        String splitter = column.getString(KeyConstant.COLUMN_SPLITTER);
+                        if(Strings.isNullOrEmpty(splitter)) {
+                            throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_VALUE,
                                     MongoDBReaderErrorCode.ILLEGAL_VALUE.getDescription());
-                            } else {
-                                ArrayList array = (ArrayList)tempCol;
-                                String tempArrayStr = Joiner.on(splitter).join(array);
-                                record.addColumn(new StringColumn(tempArrayStr));
-                            }
                         } else {
-                            record.addColumn(new StringColumn(tempCol.toString()));
+                            ArrayList array = (ArrayList)tempCol;
+                            String tempArrayStr = Joiner.on(splitter).join(array);
+                            record.addColumn(new StringColumn(tempArrayStr));
                         }
+                    } else if(KeyConstant.isJsonType(column.getString(KeyConstant.COLUMN_TYPE))) {
+                        ArrayList array = (ArrayList)tempCol;
+                        record.addColumn(new StringColumn(JSON.toJSONString(array)));
+                    } else {
+                        record.addColumn(new StringColumn(tempCol.toString()));
                     }
                 }
                 recordSender.sendToWriter(record);
@@ -204,6 +213,11 @@ public class MongoDBReader extends Reader {
             this.timestampFmt = readerSliceConfig.getString(KeyConstant.TIMESTAMP_FORMAT);
             if(!Strings.isNullOrEmpty(this.timestampCol) && !Strings.isNullOrEmpty(this.timestampFmt)) {
                 this.formatter = new SimpleDateFormat(this.timestampFmt);
+            }
+            this.timeStrCol = readerSliceConfig.getString(KeyConstant.TIME_STR_COLUMN);
+            this.timeStrFmt = readerSliceConfig.getString(KeyConstant.TIME_STR_FORMAT);
+            if(!Strings.isNullOrEmpty(this.timeStrCol) && !Strings.isNullOrEmpty(this.timeStrFmt)) {
+                this.timeStrFormatter = new SimpleDateFormat(this.timeStrFmt);
             }
             this.authDb = readerSliceConfig.getString(KeyConstant.MONGO_AUTHDB, this.database);
             if(!Strings.isNullOrEmpty(userName) && !Strings.isNullOrEmpty(password)) {

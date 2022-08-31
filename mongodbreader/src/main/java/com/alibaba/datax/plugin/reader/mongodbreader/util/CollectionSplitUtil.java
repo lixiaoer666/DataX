@@ -95,6 +95,8 @@ public class CollectionSplitUtil {
             Document result = database.runCommand(new Document("collStats", collName));
             docCount = result.getInteger("count");
         }
+        LOGGER.info("query: " + query);
+        LOGGER.info("queryFilter: " + queryFilter.toJson());
 
         LOGGER.info("集合总数为: "+ docCount);
         if (docCount == 0) {

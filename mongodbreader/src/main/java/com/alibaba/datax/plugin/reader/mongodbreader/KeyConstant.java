@@ -9,9 +9,17 @@ public class KeyConstant {
      */
     public static final String ARRAY_TYPE = "array";
     /**
+     * JSON类型
+     */
+    public static final String JSON_TYPE = "json";
+    /**
      * 嵌入文档数组类型
      */
     public static final String DOCUMENT_ARRAY_TYPE = "document.array";
+    /**
+     * 嵌入文档JSON类型
+     */
+    public static final String DOCUMENT_JSON_TYPE = "document.json";
     /**
      * 嵌入文档类型
      */
@@ -72,6 +80,14 @@ public class KeyConstant {
      * 时间戳格式化内容
      */
     public static final String TIMESTAMP_FORMAT = "timestampFmt";
+    /**
+     * 字符串时间字段名称
+     */
+    public static final String TIME_STR_COLUMN = "timeStrCol";
+    /**
+     * 字符串时间格式内容
+     */
+    public static final String TIME_STR_FORMAT = "timeStrFmt";
 
 
     public static final String LOWER_BOUND = "lowerBound";
@@ -97,6 +113,15 @@ public class KeyConstant {
      */
     public static boolean isArrayType(String type) {
         return ARRAY_TYPE.equals(type) || DOCUMENT_ARRAY_TYPE.equals(type);
+    }
+
+    /**
+     * 判断是否为JSON类型
+     * @param type JSON类型
+     * @return
+     */
+    public static boolean isJsonType(String type) {
+        return JSON_TYPE.equals(type) || DOCUMENT_JSON_TYPE.equals(type);
     }
 
     public static boolean isDocumentType(String type) {
