@@ -1,0 +1,10 @@
+{
+    "name": "starrockswriter",
+    "class": "com.alibaba.datax.plugin.writer.starrockswriter.StarRocksWriter",
+    "description": {
+        "useScene": "use starrocks json load",
+        "mechanism": "",
+        "warn": ""
+    },
+    "developer": "lixiaoer666"
+}
